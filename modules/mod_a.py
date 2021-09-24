@@ -1,4 +1,4 @@
-import mod_c
+from mod_c import *
 import mod_b
 
 
