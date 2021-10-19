@@ -6,7 +6,7 @@ What is it?
 Pure Python command-line RSS reader. Enter the url-address of the rss-feed
 and read the news.
 
-        rss-reader https://news.yahoo.com/rss/ --limit 5
+        rss-reader https://news.yahoo.com/rss/ --limit 1
 
         Feed: YahooNews
 
@@ -19,8 +19,8 @@ Documentation
 -------------
 
 The documentation available as of the date of this release is
-included in help, if you enter 'rss-reader -h' or 'rss-reader --help' 
-in command line.
+included in 1) help, if you enter 'rss-reader -h' or 'rss-reader --help' 
+in command line; 2) README.md.
 
         RSS-Reader [-h] [--version] [--json] [--verbose] [--limit LIMIT] source
 
@@ -39,21 +39,29 @@ in command line.
 JSON has structure:
 
         {
-        "Title": "Представляем Ansible Automation Platform 2",
-        "Date": ", 15 Oct 2021 17:35:34 GMT",
-        "Link": "https://habr.com/ru/post/583758/
-        "Description": "На прошедшей в конце сентября конференции мы анонсировали новую,
-        вторую версию платформы автоматизации Ansible, над которой трудились два года. 
-        Сегодня мы дадим краткий обзор концептуальных новшеств и полезных ресурсов по 
-        Ansible Automation Platform 2, а также начнем чуть подробнее знакомиться с ее 
-        новыми функциями
+        "Title": "string",
+        "Date": "string",
+        "Link": "string"
+        "Description": "any"
         }
 
 Installation
 ------------
 
-Please see the file called.  Platform specific notes can be
-found in README.platforms.
+Unpack the RSS-Reader distribution archive that you downloaded to
+where you wish to install the program. We will refer to this destination
+location as your {installation home} below.
+
+        $ cd ~/installation home
+        $ tar -xvf RSS-Reader-0.2.tar.gz
+
+Open a console and cd into "{installation home}" and type:
+
+        $ cd ./RSS-Reader-0.2/
+
+Install the program
+
+        $ sudo python3 setup.py install
 
 Licensing
 ---------

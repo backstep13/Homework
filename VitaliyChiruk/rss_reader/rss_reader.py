@@ -1,9 +1,12 @@
+#!/usr/bin/ python3
+
 import argparse
 import urllib.request
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from xml.dom import minidom
 import xml.parsers.expat
 import json
+import re
 
 
 def create_parse():
@@ -12,7 +15,7 @@ def create_parse():
     OUTPUT: ArgumentParser object (names of arguments)"""
     parser = argparse.ArgumentParser(prog="RSS-Reader", description="Pure Python command-line RSS reader.")
     parser.add_argument("source", type=str, help="RSS URL")
-    parser.add_argument("--version", action="version", version="%(prog)s Version 0.1", help="Print version info")
+    parser.add_argument("--version", action="version", version="%(prog)s Version 0.2", help="Print version info")
     parser.add_argument("--json", action="store_true", help="Print result as JSON in stdout")
     parser.add_argument("--verbose", action="store_true", help="Outputs verbose status messages")
     parser.add_argument("--limit", type=int, help="Limit news topics if this parameter provided")
@@ -34,7 +37,7 @@ def get_data(url, verbose=False):
             if verbose:
                 print("---> reading is successful")
             return dom
-    except HTTPError:
+    except (HTTPError, URLError):
         print("ERROR: Wrong url, check the url address")
     except (TypeError, xml.parsers.expat.ExpatError, ValueError):  # if not xml
         print("ERROR: Invalid data")
@@ -45,13 +48,14 @@ def print_data(title, date, link, description, json_type=False):
     INPUT: XML-tags which request the program
     OUTPUT: string or json data from feed"""
     try:
+        description = re.sub(r'\<[^>]*\>', '', str(description))
         if json_type:
             data = (json.dumps({"Title": title, "Date": date, "Link": link, "Description": description},
                     indent=4, ensure_ascii=False))  # false ensure ascii for russian alphabet
             print(data)
             return data
         else:
-            data = "Title: "+str(title)+"\nDate: "+str(date)+"\nLink: "+str(link)+"\n"+str(description)
+            data = "Title: "+str(title)+"\nDate: "+str(date)+"\nLink: "+str(link)+"\n\n" + description
             print(data)
             print("==========================================================================================\n")
             return data
@@ -101,9 +105,9 @@ def check_variable(var, i):
     INPUT: XML-tag which need checking
     OUTPUT: string (400 symbols) from XML or space in stdout"""
     try:
-        return i.getElementsByTagName(var)[0].firstChild.nodeValue[3:400]  # if description too long
+        return i.getElementsByTagName(var)[0].firstChild.nodeValue[:400]  # if item too long
     except IndexError:
-        print(" ")
+        print("")
 
 
 def main():

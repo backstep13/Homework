@@ -1,4 +1,4 @@
-import rss_reader
+from rss_reader import rss_reader
 import unittest
 import xml.dom.minidom
 import json
