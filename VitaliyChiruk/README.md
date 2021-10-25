@@ -35,6 +35,7 @@ in command line; 2) README.md.
         --json         Print result as JSON in stdout
         --verbose      Outputs verbose status messages
         --limit LIMIT  Limit news topics if this parameter provided
+        --date DATE    Y-m-d format, for example: 2020-04-22
 
 JSON has structure:
 
@@ -45,6 +46,9 @@ JSON has structure:
         "Description": "any"
         }
 
+Date mode allows read news from local storage on a specified date, 
+possibly without specifying a source
+
 Installation
 ------------
 
@@ -53,11 +57,11 @@ where you wish to install the program. We will refer to this destination
 location as your {installation home} below.
 
         $ cd ~/installation home
-        $ tar -xvf RSS-Reader-0.2.tar.gz
+        $ tar -xvf RSS-Reader-0.3.tar.gz
 
 Open a console and cd into "{installation home}" and type:
 
-        $ cd ./RSS-Reader-0.2/
+        $ cd ./RSS-Reader-0.3/
 
 Install the program
 

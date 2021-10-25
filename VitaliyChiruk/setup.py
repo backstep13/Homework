@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="RSS-Reader",
-    version="0.2",
+    version="0.3",
     author="Vitaliy Chiruk",
     author_email="backstep13@tut.by",
     license="GNU GPL",

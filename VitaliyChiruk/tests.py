@@ -16,15 +16,15 @@ class RSSTests(unittest.TestCase):
     def test_get_data(self):
         """function checks format data from URL"""
         url = 'https://news.yahoo.com/rss/'
-        self.assertTrue(rss_reader.get_data(url))
-        self.assertIsInstance(rss_reader.get_data(url), xml.dom.minidom.Document)
+        self.assertTrue(rss_reader.get_data(url, None, None))
+        self.assertIsInstance(rss_reader.get_data(url, None, None), xml.dom.minidom.Document)
 
     def test_HTTPError(self):
         """Function checks exception if entered wrong URL"""
         wrong_url = 'https://habr.com/rs'
         temp = sys.stdout
         sys.stdout = open('test.txt', 'w')
-        rss_reader.get_data(wrong_url)
+        rss_reader.get_data(wrong_url, None, None)
         sys.stdout.close()
         sys.stdout = temp
         with open('test.txt', 'r') as f:
@@ -37,7 +37,7 @@ class RSSTests(unittest.TestCase):
         not_rss = 'https://habr.com/'
         temp = sys.stdout
         sys.stdout = open('test.txt', 'w')
-        rss_reader.get_data(not_rss)
+        rss_reader.get_data(not_rss, None, None)
         sys.stdout.close()
         sys.stdout = temp
         with open('test.txt', 'r') as f:
@@ -57,10 +57,10 @@ class RSSTests(unittest.TestCase):
     def test_output_data_wrong_limit(self):
         """Function checks exception if entered wrong limit numbers,
         creates file test.txt for reading stdout"""
-        dom = rss_reader.get_data('https://habr.com/rss/')
+        dom = rss_reader.get_data('https://habr.com/rss/', None, None)
         temp = sys.stdout
         sys.stdout = open('test.txt', 'w')
-        rss_reader.output_data(dom, -1)
+        rss_reader.output_data('https://habr.com/rss/', dom, -1)
         sys.stdout.close()
         sys.stdout = temp
         with open('test.txt', 'r') as f:
@@ -72,10 +72,10 @@ class RSSTests(unittest.TestCase):
     def test_output_data_with_limit(self):
         """Function checks limit number,
         creates file test.txt for reading stdout"""
-        dom = rss_reader.get_data('https://habr.com/rss/')
+        dom = rss_reader.get_data('https://habr.com/rss/', None, None)
         temp = sys.stdout
         sys.stdout = open('test.txt', 'w')
-        rss_reader.output_data(dom, 3)
+        rss_reader.output_data('https://habr.com/rss/', dom, 3)
         sys.stdout.close()
         sys.stdout = temp
         with open('test.txt', 'r') as f:
@@ -87,13 +87,46 @@ class RSSTests(unittest.TestCase):
         creates file test.txt for reading stdout"""
         temp = sys.stdout
         sys.stdout = open('test.txt', 'w')
-        rss_reader.get_data('https://habr.com/rss/', verbose=True)
+        rss_reader.get_data('https://habr.com/rss/', None, None, verbose=True)
         sys.stdout.close()
         sys.stdout = temp
         with open('test.txt', 'r') as f:
             text = f.readline()
         self.assertIn("--->", text)
 
+    def test_time_format(self):
+        """Function checks format date for compare with command line argument"""
+        time = 'Sun, 24 Oct 2021 16:30:41 GMT'
+        string = rss_reader.time_format(time)
+        self.assertEqual(string, '2021-10-24')
+
+    def test_check_unique(self):
+        """Function checks unique and not unique data with storage"""
+        json_dict = {"data": [
+            {
+                "Feed": "https://habr.com/rss/",
+                "Title": "My_title",
+                "Date": "2021-10-24",
+                "Link": "https://habr.com/ru/post/585208",
+                "Description": "My_description"
+            }]}
+        check_data1 = {
+            "Feed": "https://habr.com/rss/",
+            "Title": "My_title",
+            "Date": "2021-10-24",
+            "Link": "https://habr.com/ru/post/585208",
+            "Description": "My_description"
+        }
+        check_data2 = {
+            "Feed": "https://habr.com/rss/",
+            "Title": "My_title",
+            "Date": "2021-10-24",
+            "Link": "https://habr.com/ru/post/585209",
+            "Description": "My_description"
+        }
+        self.assertEqual(rss_reader.check_unique(json_dict, check_data1), None)
+        self.assertEqual(rss_reader.check_unique(json_dict, check_data2), check_data2)
+
 
 if __name__ == "__main__":
-    unittest.main()  # cover 76%
+    unittest.main()
