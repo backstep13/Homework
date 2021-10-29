@@ -9,22 +9,26 @@ import json
 import re
 import os
 
+import fpdf
 
-storage_path = os.getcwd()
-filename = os.path.join(os.path.split(storage_path)[0], 'storage.json')
+app_path = os.path.dirname(__file__)
+filename = os.path.join(app_path, "data/storage.json")
+list_to_convert = []
 
 
 def create_parse():
     """Function create console arguments
     INPUT: -
     OUTPUT: ArgumentParser object (names of arguments)"""
-    parser = argparse.ArgumentParser(prog="RSS-Reader", description="Pure Python command-line RSS reader.")
-    parser.add_argument("source", type=str, nargs='?', help="RSS URL")
-    parser.add_argument("--version", action="version", version="%(prog)s Version 0.3", help="Print version info")
+    parser = argparse.ArgumentParser(prog="RSS-Reader", description="Pure Python command-line RSS reader")
+    parser.add_argument("source", type=str, nargs="?", help="RSS URL")
+    parser.add_argument("--version", action="version", version="%(prog)s Version 0.4", help="Print version info")
     parser.add_argument("--json", action="store_true", help="Print result as JSON in stdout")
     parser.add_argument("--verbose", action="store_true", help="Outputs verbose status messages")
     parser.add_argument("--limit", type=int, help="Limit news topics if this parameter provided")
     parser.add_argument("--date", type=str, help="Y-m-d format, for example: 2020-04-22")
+    parser.add_argument("--to-pdf", type=str, help="Convert news to PDF and save to path")
+    parser.add_argument("--to-html", type=str, help="Convert news to HTML and save to path")
     return parser
 
 
@@ -67,11 +71,11 @@ def print_data(title, date, link, description, json_type=False):
     try:
         if json_type:
             data = (json.dumps({"Title": title, "Date": date, "Link": link, "Description": description},
-                    indent=4, ensure_ascii=False))  # false ensure ascii for russian alphabet
+                               indent=4, ensure_ascii=False))  # false ensure ascii for russian alphabet
             print(data)
             return data
         else:
-            data = "Title: "+str(title)+"\nDate: "+str(date)+"\nLink: "+str(link)+"\n\n" + description
+            data = "Title: " + str(title) + "\nDate: " + str(date) + "\nLink: " + str(link) + "\n\n" + description
             print(data)
             print("==========================================================================================\n")
             return data
@@ -79,7 +83,7 @@ def print_data(title, date, link, description, json_type=False):
         print("ERROR: Error data")
 
 
-def output_data(source, dom, limit, json_type=False, verbose=False):
+def output_data(source, dom, limit, conv=None, json_type=False, verbose=False):
     """Function parse XML, read data from XML-tags and save and print data
     INPUT: data source, xml-data; limit items & verbose mode & json format from console arguments
     OUTPUT: None, print data from items in stdout"""
@@ -88,7 +92,7 @@ def output_data(source, dom, limit, json_type=False, verbose=False):
             print("---> try to read xml items")
         print(f"Feed: {dom.getElementsByTagName('title')[0].firstChild.nodeValue}\n")
         count = 0  # limit counter
-        for i in dom.getElementsByTagName('item'):  # loop for search info by XML-tag <item>
+        for i in dom.getElementsByTagName("item"):  # loop for search info by XML-tag <item>
             if verbose:
                 print("---> check limit")
             if limit is None:  # if limit not provided limit=1000 (big number)
@@ -105,16 +109,19 @@ def output_data(source, dom, limit, json_type=False, verbose=False):
             if verbose:
                 print(f"---> read item №{count}")
 
-            title = i.getElementsByTagName('title')[0].firstChild.nodeValue
-            date = check_variable('pubDate', i)  # check optional parameters for information
+            title = i.getElementsByTagName("title")[0].firstChild.nodeValue
+            date = check_variable("pubDate", i)  # check optional parameters for information
             date = time_format(date, verbose)  # format data 2021-10-30
             description = check_variable("description", i)
-            description = re.sub(r'\<[^>]*\>', '', str(description))
-            link = i.getElementsByTagName('link')[0].firstChild.nodeValue
+            description = re.sub("<[^<]+?>", "", str(description))  # del html/xml tags from text
+            link = i.getElementsByTagName("link")[0].firstChild.nodeValue
+            data_to_cache = {"Feed": source, "Title": title, "Date": date, "Link": link, "Description": description}
 
             print_data(title, date, link, description, json_type)  # check json mode or string, and print data
-            data_to_cache = {"Feed": source, "Title": title, "Date": date, "Link": link, "Description": description}
             cache(data_to_cache, verbose)
+
+            if conv:
+                list_to_convert.append(data_to_cache)
 
     except (AttributeError, NameError):
         print("Problem with items in XML")
@@ -125,7 +132,7 @@ def check_variable(var, i):
     INPUT: XML-tag which need checking
     OUTPUT: string (400 symbols) from XML or space in stdout"""
     try:
-        return i.getElementsByTagName(var)[0].firstChild.nodeValue[:400]  # if item too long
+        return i.getElementsByTagName(var)[0].firstChild.nodeValue  # if item too long
     except IndexError:
         print("")
 
@@ -156,8 +163,8 @@ def check_file(verbose=False):
     OUTPUT: required data in storage.json"""
     prolog = {"data": []}
     if verbose:
-        print('---> create required data on storage.json')
-    with open(filename, 'w') as file:
+        print("---> create required data on storage.json")
+    with open(filename, "w") as file:
         json.dump(prolog, file)
 
 
@@ -174,15 +181,17 @@ def cache(new_data, verbose=False):
             if add:
                 dict_data["data"].append(add)
 
-        with open(filename, 'w') as file:
+        with open(filename, "w") as file:
             if verbose:
                 print("---> try to dump data in storage.json")
             json.dump(dict_data, file, indent=4)
 
     except FileNotFoundError:
-        print('File storage.json is not found')
+        print("File storage.json is not found")
     except (json.decoder.JSONDecodeError, KeyError):
         check_file()
+    except PermissionError:
+        print("Not enough access rights, use 'sudo'")
 
 
 def read_news(limit, json_type, date, verbose=False, source=None):
@@ -224,7 +233,7 @@ def read_news(limit, json_type, date, verbose=False, source=None):
     for i in del_list:
         json_data["data"].remove(i)
 
-    with open(filename, 'w') as file:
+    with open(filename, "w") as file:
         json.dump(json_data, file, indent=4)
 
 
@@ -233,14 +242,14 @@ def time_format(time, verbose=False):
     INPUT: string of date
     OUTPUT: date in format YYYY-MM-DD"""
     months = {
-        'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
-        'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12',
+        "jan": "01", "feb": "02", "mar": "03", "apr": "04", "may": "05", "jun": "06",
+        'jul': "07", "aug": "08", "sep": "09", "oct": "10", "nov": "11", "dec": "12"
     }
     lst = time.lower().split()
     if len(lst) == 1:
         if verbose:
             print("---> len(data) is 1")
-        format_data = str(lst[0]).split('t')
+        format_data = str(lst[0]).split("t")
         if verbose:
             print(f"---> format data = {format_data}")
         return format_data[0]
@@ -262,11 +271,70 @@ def time_format(time, verbose=False):
         if len(new_lst[0]) != 4:  # change 10 12 2020 to 2020 12 10
             new_lst.reverse()
         if len(new_lst[2]) == 1:
-            new_lst.insert(2, str('0'+new_lst[2].pop))
+            new_lst.insert(2, str("0" + new_lst[2].pop))
         if verbose:
             print("---> preparing format data")
-        format_data = '-'.join(new_lst)
+        format_data = "-".join(new_lst)
         return format_data
+
+
+def convert(conv, path, data, verbose=False):
+    """Function convert data from RSS and save to required file in path
+    INPUT: required format file, path to save, dict of data
+    OUTPUT: None (saved file)"""
+    if not os.path.exists(path):
+        print(f"Error: attempt to convert news, {path} not exists. Please, enter true path")
+    else:
+        if verbose:
+            print(f"---> Convert news to {conv} and save to {path}")
+
+        if conv == "PDF":
+            count = 1
+            directory = os.path.sep.join((path, "RSS_Reader.pdf"))
+            pdf = fpdf.FPDF()
+            pdf.add_page()  # Add a page, font, size
+            pdf.add_font("DejaVu", "", os.path.join(app_path, "DejaVuSansCondensed.ttf"), uni=True)
+            pdf.set_font("DejaVu", "", 11)
+            for i in data:
+                title = i.get("Title")
+                date = i.get("Date")
+                link = i.get("Link")
+                description = i.get("Description")
+                text = str(title) + "\n" + str(date) + "\n" + str(link) + "\n" + str(description) + "\n\n\n"
+                pdf.multi_cell(w=0, h=5, txt=text)
+                if verbose:
+                    print("---> add text to PDF page")
+                count += 1
+
+            pdf.output(directory)  # save the pdf with name .pdf
+            if verbose:
+                print("---> PDF file is saved")
+
+        if conv == "HTML":
+            directory = os.path.sep.join((path, "RSS_Reader.html"))
+            header = "<!doctype html><html><head><title>RSS-Reader</title></head><body>"
+            footer = "</table></body></html>"
+            if verbose:
+                print("---> Try to open file with required path")
+            with open(directory, "a") as file:
+                file.write(header)
+            for i in data:
+                if verbose:
+                    print("---> add item to html file")
+                title = i.get("Title")
+                date = i.get("Date")
+                link = i.get("Link")
+                description = i.get("Description")
+                text = "<b>" + str(title) + "</b><br>" + \
+                       str(date) + "<br>" + \
+                       "<a href=" + str(link) + ">" + str(link) + "</a><br>" + \
+                       str(description) + "<br><br><br>"
+                with open(directory, "a") as file:
+                    file.write(text)
+            with open(directory, "a") as file:
+                file.write(footer)
+            if verbose:
+                print("---> HTML file is saved")
 
 
 def main():
@@ -274,21 +342,33 @@ def main():
     and execute commands
     INPUT: -
     OUTPUT: None, call another functions or messages"""
+
     args = create_parse().parse_args()
+    conv = None
+    path = None
 
     if args.verbose:
         print("---> start program")
 
+    if args.to_pdf:
+        conv = "PDF"
+        path = args.to_pdf
+    elif args.to_html:
+        conv = "HTML"
+        path = args.to_html
+
     url_ok = get_data(args.source, args.date, args.limit, args.json, args.verbose)
 
     if url_ok:
-        output_data(args.source, url_ok, args.limit, args.json, args.verbose)
+        output_data(args.source, url_ok, args.limit, conv, args.json, args.verbose)
+
+    if list_to_convert:
+        convert(conv, path, list_to_convert, args.verbose)
+        list_to_convert.clear()
 
     if args.verbose:
         print("---> finish program")
 
 
 if __name__ == "__main__":
-    if not os.path.exists(filename):
-        check_file()
     main()

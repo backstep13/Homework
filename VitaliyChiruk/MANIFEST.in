@@ -1,0 +1,3 @@
+include rss_reader/data/README.md
+include rss_reader/data/storage.json
+include rss_reader/*.ttf
